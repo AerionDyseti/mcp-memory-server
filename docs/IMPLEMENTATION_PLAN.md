@@ -310,7 +310,9 @@ Config file: `~/.memory/config.json`
 
 ## Implementation Order
 
-### Phase 1: Foundation (Week 1)
+### Phase 1: Foundation - Global Memory Only (Week 1)
+
+**Goal**: Establish working memory system with single global database
 
 #### 1. Project Setup
 
@@ -319,11 +321,11 @@ Config file: `~/.memory/config.json`
 - [ ] Create basic configuration system
 - [ ] Set up logging infrastructure
 
-#### 2. Database Layer
+#### 2. Database Layer (Global Only)
 
 - [ ] Implement sqlite-vec schema (memories table + vec_memories virtual table)
-- [ ] Create database manager for dual-level storage (~/.memory/db + .memory/db)
-- [ ] Write database initialization and migration utilities
+- [ ] Create database manager for **global storage only** (~/.memory/db)
+- [ ] Write database initialization utilities
 - [ ] Add indexes for performance
 
 #### 3. Embedding Service
@@ -333,109 +335,145 @@ Config file: `~/.memory/config.json`
 - [ ] Create embedding cache (avoid re-embedding same content)
 - [ ] Test embedding performance and dimensions
 
-### Phase 2: Core MCP Server (Week 2)
-
 #### 4. Basic MCP Server
 
 - [ ] Set up FastMCP server with stdio transport
 - [ ] Implement server lifecycle management
-- [ ] Create context detection (project vs global)
 - [ ] Add configuration loading
+- [ ] Basic error handling
 
-#### 5. Core Tools (Part 1)
+#### 5. Core Tools (Minimal Set)
 
 - [ ] Implement `store_memory` tool
 - [ ] Implement `search_memory` tool with basic vector search
-- [ ] Test end-to-end: store → embed → search → retrieve
-- [ ] Validate schema and metadata storage
-
-#### 6. Core Tools (Part 2)
-
 - [ ] Implement `list_memories` tool
 - [ ] Implement `delete_memory` tool
-- [ ] Add basic error handling and validation
+- [ ] Test end-to-end: store → embed → search → retrieve
+
+**Phase 1 Deliverable**: Working MCP server with global memory storage, basic CRUD operations, and semantic search
+
+---
+
+### Phase 2: Dual-Source Storage (Week 2)
+
+**Goal**: Add project-level memory storage and precedence logic
+
+#### 6. Project Detection & Context
+
+- [ ] Implement `.memory/` directory detection
+- [ ] Add project context detection logic
+- [ ] Create project-level database initialization (.memory/db)
+- [ ] Add project_id tracking in memory metadata
+
+#### 7. Dual-Database Query System
+
+- [ ] Query both databases in parallel (global + project)
+- [ ] Implement project precedence logic (project memories override global)
+- [ ] Add project boost to scoring (+0.1 for project-level memories)
+- [ ] Test dual-source retrieval and ranking
+
+#### 8. Context-Aware Tool Behavior
+
+- [ ] Update `store_memory` to auto-detect storage location (project vs global)
+- [ ] Update `search_memory` to query both databases
+- [ ] Update `list_memories` to support filtering by location
+- [ ] Add location indicators in tool responses
+
+**Phase 2 Deliverable**: Dual-level storage system with automatic context detection and precedence logic
+
+---
 
 ### Phase 3: Advanced Features (Week 3)
 
-#### 7. Multi-Factor Scoring
+#### 9. Multi-Factor Scoring
 
 - [ ] Implement scoring algorithm (similarity + recency + priority + usage)
 - [ ] Add priority boost logic
 - [ ] Test and tune scoring weights
 - [ ] Add score breakdown in results
 
-#### 8. Update & Deduplication
+#### 10. Update & Deduplication
 
 - [ ] Implement `update_memory` tool with re-embedding
 - [ ] Implement `deduplicate_memories` tool
 - [ ] Add duplicate detection on storage
 - [ ] Create merge strategies
 
-#### 9. Usage Tracking
+#### 11. Usage Tracking
 
 - [ ] Add access count increment on retrieval
 - [ ] Track last_accessed_at timestamps
 - [ ] Store usage contexts (where/how memory was used)
 - [ ] Add usage metrics to scoring
 
+**Phase 3 Deliverable**: Enhanced search quality with multi-factor scoring, deduplication, and usage analytics
+
+---
+
 ### Phase 4: Automation & Intelligence (Week 4)
 
-#### 10. Automatic Triggers
+#### 12. Automatic Triggers
 
 - [ ] Implement session-end memory generation
 - [ ] Add key decision detection patterns
 - [ ] Add error resolution detection
 - [ ] Create LLM prompts for extraction
 
-#### 11. Priority System
+#### 13. Priority System
 
 - [ ] Implement smart priority suggestions
 - [ ] Add pattern-based priority hints
 - [ ] Create priority override mechanism
 - [ ] Test with various memory types
 
-#### 12. Markdown Import
+#### 14. Markdown Import
 
 - [ ] Implement file scanner for .md files
 - [ ] Create parser for common structures
 - [ ] Build preview/confirmation UI (via tool responses)
 - [ ] Implement import with metadata tagging
 
+**Phase 4 Deliverable**: Intelligent memory creation with automatic triggers and smart suggestions
+
+---
+
 ### Phase 5: Polish & Integration (Week 5)
 
-#### 13. Error Handling & Fallbacks
+#### 15. Error Handling & Fallbacks
 
 - [ ] Add FTS5 text search fallback
 - [ ] Implement retry logic for database locks
 - [ ] Add graceful degradation
 - [ ] Comprehensive error messages
 
-#### 14. Model Migration
+#### 16. Model Migration
 
 - [ ] Implement lazy migration on retrieval
 - [ ] Create `migrate_embeddings` batch tool
 - [ ] Add model version compatibility checks
 - [ ] Test migration scenarios
 
-#### 15. Resources (Optional)
+#### 17. Resources (Optional)
 
 - [ ] Implement MCP resources for CORE/HIGH memories
 - [ ] Add resource URIs (memory://core, etc.)
 - [ ] Test resource browsing in Claude Code
 
-#### 16. Testing & Documentation
+#### 18. Testing & Documentation
 
 - [ ] Write integration tests for all tools
 - [ ] Add performance benchmarks
 - [ ] Create user documentation (README, usage guide)
 - [ ] Write developer documentation (architecture, extending)
 
-#### 17. Claude Code Integration
+#### 19. Claude Code Integration
 
 - [ ] Create installation script
 - [ ] Generate MCP configuration
 - [ ] Write hooks for session start/end
 - [ ] Test full integration with Claude Code
+
+**Phase 5 Deliverable**: Production-ready MCP server with comprehensive testing, documentation, and seamless Claude Code integration
 
 ---
 
@@ -551,7 +589,7 @@ Config file: `~/.memory/config.json`
 
 ## Future Enhancements (Post-MVP)
 
-### Phase 2: Natural Language Triggers (High Priority)
+### Phase 6: Natural Language Triggers (High Priority)
 **Inspiration**: doobidoo's MCP Memory Service natural language trigger system
 
 1. **Semantic trigger detection**: ML-based conversation analysis for automatic memory retrieval
@@ -569,9 +607,9 @@ Config file: `~/.memory/config.json`
    - Proactive memory suggestions based on conversation direction
    - Zero-restart dynamic hook updates
 
-**Note**: MVP uses rule-based pattern matching in hooks; Phase 2 enhances with ML-based semantic detection using the same hook architecture.
+**Note**: MVP uses rule-based pattern matching in hooks; Phase 6 enhances with ML-based semantic detection using the same hook architecture.
 
-### Phase 3: Additional Features
+### Phase 7: Additional Features
 
 1. **Multi-modal memories**: Support image/diagram embeddings
 2. **Memory clustering**: Automatically group related memories
