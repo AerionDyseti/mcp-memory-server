@@ -1,0 +1,45 @@
+[project]
+name = "memory-server"
+version = "0.1.0"
+description = "MCP server for semantic memory storage using sqlite-vec and local embeddings"
+readme = "README.md"
+authors = [
+    { name = "Kevin Whiteside", email = "kevin.whiteside@favordelivery.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=0.3.0",
+    "sqlite-vec>=0.1.1",
+    "fastembed>=0.3.0",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+memory-server = "memory_server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+markers = [
+    "unit: Unit tests (fast, mocked dependencies)",
+    "integration: Integration tests (real embeddings, DB)",
+    "e2e: End-to-end tests (full MCP client)",
+    "slow: Slow tests (skip for rapid feedback)",
+    "benchmark: Performance benchmark tests",
+]
