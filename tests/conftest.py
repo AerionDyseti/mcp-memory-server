@@ -3,14 +3,17 @@ Shared pytest fixtures for memory server tests.
 """
 
 import hashlib
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
 from memory_server.config import EmbeddingConfig
+from memory_server.database import DatabaseManager
 from memory_server.embedding.cache import EmbeddingCache
 from memory_server.embedding.service import EmbeddingService
+from memory_server.service import MemoryService
 
 
 @pytest.fixture
@@ -80,4 +83,89 @@ def sample_texts():
         "Use FastAPI for REST APIs with automatic OpenAPI documentation",
         "SQLite WAL mode enables concurrent reads",
         "Python async context manager pattern for resource cleanup",
+    ]
+
+
+@pytest.fixture
+def temp_db_path(tmp_path):
+    """Provide temporary database path for each test."""
+    db_path = tmp_path / "test.db"
+    yield str(db_path)
+    # Cleanup happens automatically with tmp_path
+
+
+@pytest.fixture
+def test_db_manager(temp_db_path, monkeypatch):
+    """
+    Create DatabaseManager with temporary database.
+
+    Mocks sqlite-vec extension loading to avoid requiring the actual extension.
+    """
+    # Mock the vec extension loading
+    def mock_load_extension(conn):
+        """Mock extension loading - just pass through."""
+        pass
+
+    with monkeypatch.context() as m:
+        m.setattr("memory_server.database.manager.DatabaseManager._load_vec_extension", mock_load_extension)
+        manager = DatabaseManager(db_path=temp_db_path)
+        # Skip initialization that requires vec extension
+        # We'll test the actual DB operations separately
+        yield manager
+
+
+@pytest.fixture
+def test_memory_service(temp_db_path, mock_embedding_service, monkeypatch):
+    """
+    Create MemoryService with mocked dependencies for testing.
+
+    Uses temporary database and mocked embedding service.
+    """
+    # Mock vec extension loading
+    def mock_load_extension(conn):
+        pass
+
+    with monkeypatch.context() as m:
+        m.setattr("memory_server.database.manager.DatabaseManager._load_vec_extension", mock_load_extension)
+        service = MemoryService(
+            db_path=temp_db_path,
+            embedding_service=mock_embedding_service,
+        )
+        yield service
+
+
+@pytest.fixture
+def sample_memories():
+    """Sample memory objects for testing."""
+    return [
+        {
+            "content": "Use FastAPI for REST APIs with automatic OpenAPI documentation",
+            "tags": ["architecture", "api", "fastapi"],
+            "priority": "HIGH",
+            "category": "architecture",
+        },
+        {
+            "content": "SQLite WAL mode enables concurrent reads: PRAGMA journal_mode=WAL",
+            "tags": ["database", "sqlite", "performance"],
+            "priority": "NORMAL",
+            "category": "configuration",
+        },
+        {
+            "content": "Auth error: JWT token expired. Solution: Implement token refresh mechanism",
+            "tags": ["bug", "auth", "jwt"],
+            "priority": "NORMAL",
+            "category": "bug-fix",
+        },
+        {
+            "content": "Python async context manager pattern for resource cleanup",
+            "tags": ["pattern", "python", "async"],
+            "priority": "NORMAL",
+            "category": "code-pattern",
+        },
+        {
+            "content": "Use Pydantic for request validation in FastAPI endpoints",
+            "tags": ["pattern", "fastapi", "validation"],
+            "priority": "NORMAL",
+            "category": "code-pattern",
+        },
     ]
