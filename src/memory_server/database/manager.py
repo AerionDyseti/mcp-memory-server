@@ -14,6 +14,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+import sqlite_vec
+
 from ..utils.logger import get_logger
 from .schema import (
     COL_ACCESS_COUNT,
@@ -130,6 +132,7 @@ class DatabaseManager:
 
             # Try common extension locations
             extension_paths = [
+                sqlite_vec.loadable_path(),  # Python package path
                 "vec0",  # If in system path
                 "libvec0.so",  # Linux
                 "libvec0.dylib",  # macOS
