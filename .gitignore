@@ -153,3 +153,9 @@ models/
 # Test artifacts
 .test_db
 test_*.db
+
+# Node.js
+node_modules/
+bun.lock
+package-lock.json
+.claude/
