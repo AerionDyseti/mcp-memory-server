@@ -25,36 +25,36 @@ export class MemoryService {
       supersededBy: null,
     };
 
-    this.repository.insert(memory);
+    await this.repository.insert(memory);
     return memory;
   }
 
-  get(id: string): Memory | null {
-    return this.repository.findById(id);
+  async get(id: string): Promise<Memory | null> {
+    return await this.repository.findById(id);
   }
 
-  delete(id: string): boolean {
-    return this.repository.markDeleted(id);
+  async delete(id: string): Promise<boolean> {
+    return await this.repository.markDeleted(id);
   }
 
   async search(query: string, limit: number = 10): Promise<Memory[]> {
     const queryEmbedding = await this.embeddings.embed(query);
     const fetchLimit = limit * 3;
 
-    const rows = this.repository.findSimilar(queryEmbedding, fetchLimit);
+    const rows = await this.repository.findSimilar(queryEmbedding, fetchLimit);
 
     const results: Memory[] = [];
     const seenIds = new Set<string>();
 
     for (const row of rows) {
-      let memory = this.repository.findById(row.id);
+      let memory = await this.repository.findById(row.id);
 
       if (!memory) {
         continue;
       }
 
       if (isSuperseded(memory)) {
-        memory = this.followSupersessionChain(row.id);
+        memory = await this.followSupersessionChain(row.id);
         if (!memory) {
           continue;
         }
@@ -74,13 +74,13 @@ export class MemoryService {
     return results;
   }
 
-  private followSupersessionChain(memoryId: string): Memory | null {
+  private async followSupersessionChain(memoryId: string): Promise<Memory | null> {
     const visited = new Set<string>();
     let currentId: string | null = memoryId;
 
     while (currentId && !visited.has(currentId)) {
       visited.add(currentId);
-      const memory = this.repository.findById(currentId);
+      const memory = await this.repository.findById(currentId);
 
       if (!memory) {
         return null;

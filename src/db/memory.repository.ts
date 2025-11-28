@@ -1,12 +1,5 @@
-import type { Database } from "bun:sqlite";
-import { eq } from "drizzle-orm";
-import {
-  serializeVector,
-  deserializeVector,
-} from "@aeriondyseti/drizzle-sqlite-vec";
-
-import type { DrizzleDB } from "./connection.js";
-import { memories } from "./schema.js";
+import * as lancedb from "@lancedb/lancedb";
+import { TABLE_NAME, memorySchema } from "./schema.js";
 import {
   type Memory,
   type VectorRow,
@@ -14,91 +7,88 @@ import {
 } from "../types/memory.js";
 
 export class MemoryRepository {
-  constructor(
-    private db: DrizzleDB,
-    private sqlite: Database
-  ) {}
+  constructor(private db: lancedb.Connection) {}
 
-  insert(memory: Memory): void {
-    // Insert into memories table using Drizzle
-    this.db.insert(memories).values({
-      id: memory.id,
-      content: memory.content,
-      metadata: JSON.stringify(memory.metadata),
-      createdAt: memory.createdAt.toISOString(),
-      updatedAt: memory.updatedAt.toISOString(),
-      supersededBy: memory.supersededBy,
-    }).run();
-
-    // Insert into vec_memories using raw SQL (sqlite-vec doesn't work with ORMs)
-    this.sqlite
-      .query(`INSERT INTO vec_memories (id, embedding) VALUES (?, ?)`)
-      .run(memory.id, serializeVector(memory.embedding));
+  private async getTable() {
+    const names = await this.db.tableNames();
+    if (names.includes(TABLE_NAME)) {
+      return await this.db.openTable(TABLE_NAME);
+    }
+    // Create with empty data to initialize schema
+    return await this.db.createTable(TABLE_NAME, [], { schema: memorySchema });
   }
 
-  findById(id: string): Memory | null {
-    const row = this.db
-      .select()
-      .from(memories)
-      .where(eq(memories.id, id))
-      .get();
+  async insert(memory: Memory): Promise<void> {
+    const table = await this.getTable();
+    await table.add([
+      {
+        id: memory.id,
+        vector: memory.embedding,
+        content: memory.content,
+        metadata: JSON.stringify(memory.metadata),
+        created_at: memory.createdAt.getTime(),
+        updated_at: memory.updatedAt.getTime(),
+        superseded_by: memory.supersededBy,
+      },
+    ]);
+  }
 
-    if (!row) {
+  async findById(id: string): Promise<Memory | null> {
+    const table = await this.getTable();
+    const results = await table.query().where(`id = '${id}'`).limit(1).toArray();
+
+    if (results.length === 0) {
       return null;
     }
 
-    // Get embedding from vec_memories using raw SQL
-    const vecRow = this.sqlite
-      .query("SELECT embedding FROM vec_memories WHERE id = ?")
-      .get(id) as { embedding: Uint8Array } | null;
-
-    const embedding = vecRow ? deserializeVector(Buffer.from(vecRow.embedding)) : [];
+    const row = results[0];
+    
+    // Handle Arrow Vector type conversion
+    // LanceDB returns an Arrow Vector object which is iterable but not an array
+    const vectorData = row.vector as any;
+    const embedding = Array.isArray(vectorData) 
+      ? vectorData 
+      : Array.from(vectorData) as number[];
 
     return {
-      id: row.id,
-      content: row.content,
+      id: row.id as string,
+      content: row.content as string,
       embedding,
-      metadata: JSON.parse(row.metadata),
-      createdAt: new Date(row.createdAt),
-      updatedAt: new Date(row.updatedAt),
-      supersededBy: row.supersededBy,
+      metadata: JSON.parse(row.metadata as string),
+      createdAt: new Date(row.created_at as number),
+      updatedAt: new Date(row.updated_at as number),
+      supersededBy: row.superseded_by as string | null,
     };
   }
 
-  markDeleted(id: string): boolean {
-    const existing = this.db
-      .select({ id: memories.id })
-      .from(memories)
-      .where(eq(memories.id, id))
-      .get();
-
-    if (!existing) {
+  async markDeleted(id: string): Promise<boolean> {
+    const table = await this.getTable();
+    
+    // Verify existence first to match previous behavior (return false if not found)
+    const existing = await table.query().where(`id = '${id}'`).limit(1).toArray();
+    if (existing.length === 0) {
       return false;
     }
 
-    const now = new Date();
-    this.db
-      .update(memories)
-      .set({
-        supersededBy: DELETED_TOMBSTONE,
-        updatedAt: now.toISOString(),
-      })
-      .where(eq(memories.id, id))
-      .run();
+    const now = Date.now();
+    await table.update({
+      where: `id = '${id}'`,
+      values: {
+        superseded_by: DELETED_TOMBSTONE,
+        updated_at: now,
+      },
+    });
 
     return true;
   }
 
-  findSimilar(embedding: number[], limit: number): VectorRow[] {
-    // Vector search must use raw SQL
-    return this.sqlite
-      .query(
-        `SELECT id, distance
-         FROM vec_memories
-         WHERE embedding MATCH ?
-         ORDER BY distance
-         LIMIT ?`
-      )
-      .all(serializeVector(embedding), limit) as VectorRow[];
+  async findSimilar(embedding: number[], limit: number): Promise<VectorRow[]> {
+    const table = await this.getTable();
+    const results = await table.vectorSearch(embedding).limit(limit).toArray();
+
+    return results.map((r) => ({
+      id: r.id as string,
+      distance: r._distance as number,
+    }));
   }
 }

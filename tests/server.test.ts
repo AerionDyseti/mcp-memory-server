@@ -2,7 +2,7 @@ import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import type { Database } from "bun:sqlite";
+import * as lancedb from "@lancedb/lancedb";
 import { tools } from "../src/mcp/tools";
 import {
   handleToolCall,
@@ -12,30 +12,26 @@ import {
   handleGetMemory,
 } from "../src/mcp/handlers";
 import { createServer } from "../src/mcp/server";
-import { createDatabase, type DrizzleDB } from "../src/db/connection";
+import { connectToDatabase } from "../src/db/connection";
 import { MemoryRepository } from "../src/db/memory.repository";
 import { EmbeddingsService } from "../src/services/embeddings.service";
 import { MemoryService } from "../src/services/memory.service";
 
 describe("mcp", () => {
-  let db: DrizzleDB;
-  let sqlite: Database;
+  let db: lancedb.Connection;
   let service: MemoryService;
   let tmpDir: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     tmpDir = mkdtempSync(join(tmpdir(), "mcp-memory-test-"));
-    const dbPath = join(tmpDir, "test.db");
-    const conn = createDatabase(dbPath);
-    db = conn.db;
-    sqlite = conn.sqlite;
-    const repository = new MemoryRepository(db, sqlite);
+    const dbPath = join(tmpDir, "test.lancedb");
+    db = await connectToDatabase(dbPath);
+    const repository = new MemoryRepository(db);
     const embeddings = new EmbeddingsService("Xenova/all-MiniLM-L6-v2", 384);
     service = new MemoryService(repository, embeddings);
   });
 
   afterEach(() => {
-    sqlite.close();
     rmSync(tmpDir, { recursive: true });
   });
 
@@ -88,7 +84,7 @@ describe("mcp", () => {
       expect(response.content[0].text).toMatch(/Memory stored with ID:/);
 
       const idMatch = response.content[0].text.match(/Memory stored with ID: (.+)/);
-      const memory = service.get(idMatch![1]);
+      const memory = await service.get(idMatch![1]);
       expect(memory!.metadata).toEqual({ key: "value" });
     });
   });
@@ -97,13 +93,13 @@ describe("mcp", () => {
     test("deletes existing memory", async () => {
       const mem = await service.store("test");
 
-      const response = handleDeleteMemory({ id: mem.id }, service);
+      const response = await handleDeleteMemory({ id: mem.id }, service);
 
       expect(response.content[0].text).toBe(`Memory ${mem.id} deleted successfully`);
     });
 
-    test("returns not found for non-existent ID", () => {
-      const response = handleDeleteMemory({ id: "non-existent" }, service);
+    test("returns not found for non-existent ID", async () => {
+      const response = await handleDeleteMemory({ id: "non-existent" }, service);
 
       expect(response.content[0].text).toBe("Memory non-existent not found");
     });
@@ -164,7 +160,7 @@ describe("mcp", () => {
     test("returns memory details", async () => {
       const mem = await service.store("test content", { key: "value" });
 
-      const response = handleGetMemory({ id: mem.id }, service);
+      const response = await handleGetMemory({ id: mem.id }, service);
 
       const text = response.content[0].text;
       expect(text).toContain(`ID: ${mem.id}`);
@@ -174,17 +170,17 @@ describe("mcp", () => {
       expect(text).toContain("Updated:");
     });
 
-    test("returns not found for non-existent ID", () => {
-      const response = handleGetMemory({ id: "non-existent" }, service);
+    test("returns not found for non-existent ID", async () => {
+      const response = await handleGetMemory({ id: "non-existent" }, service);
 
       expect(response.content[0].text).toBe("Memory non-existent not found");
     });
 
     test("includes supersededBy when set", async () => {
       const mem = await service.store("test");
-      service.delete(mem.id);
+      await service.delete(mem.id);
 
-      const response = handleGetMemory({ id: mem.id }, service);
+      const response = await handleGetMemory({ id: mem.id }, service);
 
       expect(response.content[0].text).toContain("Superseded by: DELETED");
     });
@@ -192,7 +188,7 @@ describe("mcp", () => {
     test("omits metadata line when empty", async () => {
       const mem = await service.store("test");
 
-      const response = handleGetMemory({ id: mem.id }, service);
+      const response = await handleGetMemory({ id: mem.id }, service);
 
       expect(response.content[0].text).not.toContain("Metadata:");
     });

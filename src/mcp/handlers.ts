@@ -14,12 +14,12 @@ export async function handleStoreMemory(
   };
 }
 
-export function handleDeleteMemory(
+export async function handleDeleteMemory(
   args: Record<string, unknown> | undefined,
   service: MemoryService
-): CallToolResult {
+): Promise<CallToolResult> {
   const id = args?.id as string;
-  const success = service.delete(id);
+  const success = await service.delete(id);
 
   return {
     content: [
@@ -60,12 +60,12 @@ export async function handleSearchMemories(
   };
 }
 
-export function handleGetMemory(
+export async function handleGetMemory(
   args: Record<string, unknown> | undefined,
   service: MemoryService
-): CallToolResult {
+): Promise<CallToolResult> {
   const id = args?.id as string;
-  const memory = service.get(id);
+  const memory = await service.get(id);
 
   if (!memory) {
     return {

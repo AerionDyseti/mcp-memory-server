@@ -1,24 +1,33 @@
-import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 import {
-  vec0Table,
-  vecText,
-  vecFloat,
-  EmbeddingDimensions,
-} from "@aeriondyseti/drizzle-sqlite-vec";
+  Schema,
+  Field,
+  FixedSizeList,
+  Float32,
+  Utf8,
+  Timestamp,
+  TimeUnit,
+} from "apache-arrow";
 
-export const memories = sqliteTable("memories", {
-  id: text("id").primaryKey(),
-  content: text("content").notNull(),
-  metadata: text("metadata").notNull().default("{}"),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-  supersededBy: text("superseded_by"),
-});
+export const TABLE_NAME = "memories";
 
-export const vecMemories = vec0Table("vec_memories", {
-  id: vecText("id").primaryKey(),
-  embedding: vecFloat("embedding", EmbeddingDimensions.MINILM_L6_V2),
-});
-
-export type MemoryRecord = typeof memories.$inferSelect;
-export type NewMemoryRecord = typeof memories.$inferInsert;
+export const memorySchema = new Schema([
+  new Field("id", new Utf8(), false),
+  new Field(
+    "vector",
+    new FixedSizeList(384, new Field("item", new Float32())),
+    false
+  ),
+  new Field("content", new Utf8(), false),
+  new Field("metadata", new Utf8(), false), // JSON string
+  new Field(
+    "created_at",
+    new Timestamp(TimeUnit.MILLISECOND),
+    false
+  ),
+  new Field(
+    "updated_at",
+    new Timestamp(TimeUnit.MILLISECOND),
+    false
+  ),
+  new Field("superseded_by", new Utf8(), true), // Nullable
+]);
