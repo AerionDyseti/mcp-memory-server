@@ -1,4 +1,4 @@
-# MCP Memory Server
+# Vector Memory MCP Server
 
 > Replace static markdown context files with intelligent, semantically-searchable memories that understand what you're working on.
 
@@ -17,7 +17,7 @@ A production-ready MCP (Model Context Protocol) server that provides semantic me
 
 ### 🔒 **Local-First & Private**
 - All embeddings generated locally (no cloud APIs)
-- Data stored in local sqlite-vec databases
+- Data stored in local LanceDB databases
 - Complete privacy and control over your memories
 
 ### 🎯 **Intelligent Semantic Search**
@@ -26,8 +26,8 @@ A production-ready MCP (Model Context Protocol) server that provides semantic me
 - Context-aware retrieval based on conversation flow
 
 ### 📊 **Smart Memory Storage**
-- Stores memories in `~/.local/share/mcp-memory/memories.db`
-- Fast SQLite-based storage with vector search capabilities
+- Stores memories in `~/.local/share/vector-memory-mcp/memories.db`
+- Fast LanceDB-based storage with vector search capabilities
 - Memories persist across sessions and projects
 
 ### ⚡ **High Performance**
@@ -61,8 +61,8 @@ A production-ready MCP (Model Context Protocol) server that provides semantic me
 
 ```bash
 # Clone the repository
-git clone https://github.com/AerionDyseti/mcp-memory-server.git
-cd mcp-memory-server
+git clone https://github.com/AerionDyseti/vector-memory-mcp.git
+cd vector-memory-mcp
 
 # Install dependencies
 bun install
@@ -77,7 +77,7 @@ Add to your `~/.claude/config.json`:
   "mcpServers": {
     "memory": {
       "command": "bun",
-      "args": ["run", "/absolute/path/to/mcp-memory-server/src/index.ts"]
+      "args": ["run", "/absolute/path/to/vector-memory-mcp/src/index.ts"]
     }
   }
 }
@@ -155,11 +155,11 @@ Delete a memory:
 ## 🏗️ Architecture
 
 ```
-mcp-memory-server/
+vector-memory-mcp/
 ├── src/
 │   ├── index.ts            # Entry point
 │   ├── config/             # Configuration management
-│   ├── db/                 # Database layer (Drizzle ORM + sqlite-vec)
+│   ├── db/                 # Database layer (LanceDB)
 │   ├── services/
 │   │   ├── embeddings.service.ts  # Embeddings via @xenova/transformers
 │   │   └── memory.service.ts      # Core memory operations
@@ -171,18 +171,17 @@ mcp-memory-server/
 │   ├── memory.test.ts
 │   └── embeddings.test.ts
 ├── bin/
-│   └── mcp-memory.js       # Executable entry point
+│   └── vector-memory-mcp.js # Executable entry point
 └── package.json
 ```
 
 ### Technology Stack
 
 - **MCP Framework**: @modelcontextprotocol/sdk (official SDK)
-- **Vector Database**: sqlite-vec (fast, local, SQLite-based)
-- **ORM**: Drizzle ORM with @aeriondyseti/drizzle-sqlite-vec
+- **Vector Database**: LanceDB (fast, local, vector search)
 - **Embeddings**: @xenova/transformers (Xenova/all-MiniLM-L6-v2, 384 dimensions)
 - **Language**: TypeScript 5.0+
-- **Runtime**: Bun 1.0+ (required for bun:sqlite)
+- **Runtime**: Bun 1.0+
 - **Testing**: Bun test
 
 ---
@@ -196,9 +195,9 @@ Claude Code calls store_memory tool
          ↓
 Content → @xenova/transformers → 384d vector
          ↓
-Store in sqlite-vec with metadata
+Store in LanceDB with metadata
          ↓
-~/.local/share/mcp-memory/memories.db
+~/.local/share/vector-memory-mcp/memories.db
 ```
 
 ### 2. Memory Retrieval
@@ -208,7 +207,7 @@ Claude Code calls search_memories
          ↓
 Query → @xenova/transformers → 384d vector
          ↓
-KNN search in sqlite-vec
+Vector search in LanceDB
          ↓
 Vector similarity scoring
          ↓
@@ -221,13 +220,13 @@ Return top N relevant memories
 
 The server uses environment variables for configuration:
 
-- `MCP_MEMORY_DB_PATH` - Custom database path (default: `~/.local/share/mcp-memory/memories.db`)
-- `MCP_MEMORY_MODEL` - Embedding model to use (default: `Xenova/all-MiniLM-L6-v2`)
+- `VECTOR_MEMORY_DB_PATH` - Custom database path (default: `~/.local/share/vector-memory-mcp/memories.db`)
+- `VECTOR_MEMORY_MODEL` - Embedding model to use (default: `Xenova/all-MiniLM-L6-v2`)
 
 Example:
 ```bash
-export MCP_MEMORY_DB_PATH="/path/to/custom/memories.db"
-export MCP_MEMORY_MODEL="Xenova/all-MiniLM-L6-v2"
+export VECTOR_MEMORY_DB_PATH="/path/to/custom/memories.db"
+export VECTOR_MEMORY_MODEL="Xenova/all-MiniLM-L6-v2"
 ```
 
 Or in your Claude Code config:
@@ -235,9 +234,9 @@ Or in your Claude Code config:
 {
   "mcpServers": {
     "memory": {
-      "command": "mcp-memory",
+      "command": "vector-memory-mcp",
       "env": {
-        "MCP_MEMORY_DB_PATH": "/custom/path/memories.db"
+        "VECTOR_MEMORY_DB_PATH": "/custom/path/memories.db"
       }
     }
   }
@@ -285,7 +284,7 @@ bun run build
 ## 🗺️ Roadmap
 
 ### ✅ Phase 1: Foundation (Current)
-- ✅ Core database with sqlite-vec
+- ✅ Core database with LanceDB
 - ✅ Embedding generation with @xenova/transformers
 - ✅ Basic MCP tools (store, search, get, delete)
 - ✅ TypeScript implementation with Drizzle ORM
@@ -299,7 +298,7 @@ bun run build
 
 ### 📋 Phase 3: Dual-Level Memory System
 - Project-specific memories (`.memory/db` in repo)
-- Global memories (`~/.local/share/mcp-memory/`)
+- Global memories (`~/.local/share/vector-memory-mcp/`)
 - Automatic precedence handling (project overrides global)
 - Project detection and context switching
 
@@ -364,8 +363,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 💬 Support
 
-- **Issues**: [GitHub Issues](https://github.com/AerionDyseti/mcp-memory-server/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/AerionDyseti/mcp-memory-server/discussions)
+- **Issues**: [GitHub Issues](https://github.com/AerionDyseti/vector-memory-mcp/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/AerionDyseti/vector-memory-mcp/discussions)
 - **Documentation**: Check the `docs/` directory
 
 ---
@@ -407,7 +406,7 @@ Claude: [Searches for authentication-related memories]
 
 <div align="center">
 
-**[⬆ Back to Top](#mcp-memory-server)**
+**[⬆ Back to Top](#vector-memory-mcp-server)**
 
 Made with ❤️ for developers who value context continuity
 

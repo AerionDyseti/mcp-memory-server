@@ -1,4 +1,4 @@
-# mcp-memory — MVP Specification
+# vector-memory-mcp — MVP Specification
 
 ## Overview
 
@@ -10,39 +10,33 @@ A simple, zero-configuration RAG memory server for MCP clients (like Claude Code
 
 ## Deployment
 
-- **Single command startup**: `uvx mcp-memory`
-- **No repo clone required** — published as a Python package
-- **Local SQLite file** — default location works automatically, configurable via environment variable if desired
+- **Single command startup**: `bunx vector-memory-mcp`
+- **No repo clone required** — published as an NPM package
+- **Local LanceDB file** — default location works automatically, configurable via environment variable if desired
 
 ## Stack
 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
-| Language | Python | ML ecosystem, Claude Code proficiency |
-| MCP SDK | `mcp` | Official Anthropic SDK |
-| Embeddings | MiniLM-v6 (`all-MiniLM-L6-v2`) | Small, fast, runs on CPU, proven reliable |
-| Vector Storage | sqlite-vec | Single file, no external dependencies |
+| Language | TypeScript | Type safety, modern ecosystem |
+| Runtime | Bun | Fast startup, built-in SQLite (used for config/metadata if needed), great DX |
+| MCP SDK | `@modelcontextprotocol/sdk` | Official TypeScript SDK |
+| Embeddings | `@xenova/transformers` | Runs locally in JS/TS, no Python dependency needed |
+| Vector Storage | LanceDB | Fast, local, efficient vector search |
 
 ## Data Model
 
 ### Memory
-```python
-@dataclass
-class Memory:
-    id: str                     # Unique identifier (UUID)
-    content: str                # The text content of the memory
-    embedding: list[float]      # Vector embedding (384 dimensions for MiniLM-v6)
-    metadata: dict              # Flexible key-value metadata
-    created_at: datetime        # When the memory was created
-    updated_at: datetime        # When the memory was last modified
-    superseded_by: str | None   # ID of the memory that replaces this one (soft-delete/update chain)
+```typescript
+interface Memory {
+  id: string;                     // Unique identifier (UUID)
+  content: string;                // The text content of the memory
+  embedding: number[];            // Vector embedding (384 dimensions for MiniLM-v6)
+  metadata: Record<string, any>;  // Flexible key-value metadata
+  created_at: Date;               // When the memory was created
+  updated_at: Date;               // When the memory was last modified
+}
 ```
-
-### Schema Notes
-
-- **Soft deletes only**: Memories are never truly deleted. A deleted memory has `superseded_by` set to a tombstone value (e.g., `"DELETED"`).
-- **Supersession chains**: When a memory is updated, a new memory is created and the old memory's `superseded_by` points to the new one. This preserves the original embedding for retrieval while returning current content.
-- **Metadata flexibility**: Start with a flexible `metadata` dict. If patterns emerge (e.g., `project` appearing on every memory), promote them to first-class fields later.
 
 ## MCP Tools
 
@@ -59,27 +53,17 @@ Create a new memory.
 **Returns:**
 - `id`: The ID of the created memory
 
-**Behavior:**
-- Generate UUID for the memory
-- Embed the content using MiniLM-v6
-- Store in SQLite with current timestamp
-- `superseded_by` is null
-
 ---
 
 ### 2. `delete_memory`
 
-Soft-delete a memory.
+Delete a memory.
 
 **Parameters:**
 - `id` (string, required): The ID of the memory to delete
 
 **Returns:**
 - `success`: boolean
-
-**Behavior:**
-- Set `superseded_by` to `"DELETED"` (or similar tombstone value)
-- Memory remains in database but won't appear in search results
 
 ---
 
@@ -94,13 +78,6 @@ Semantic search for relevant memories.
 **Returns:**
 - Array of memories, ranked by semantic similarity
 
-**Behavior:**
-- Embed the query using MiniLM-v6
-- Search sqlite-vec for top-k similar embeddings
-- Filter out memories where `superseded_by` is not null
-- **Supersession chain handling**: If a superseded memory would have matched, follow the chain to the head and return the current version instead
-- Return results ranked by similarity score
-
 ---
 
 ### 4. `get_memory`
@@ -113,55 +90,24 @@ Retrieve a specific memory by ID.
 **Returns:**
 - The memory object, or null if not found
 
-**Behavior:**
-- Direct lookup by ID
-- If memory has `superseded_by` set, optionally follow chain to head (TBD: might want to return as-is with a flag indicating it's superseded)
-
 ---
-
-## Retrieval Algorithm (MVP)
-
-1. Embed query using MiniLM-v6
-2. Vector similarity search in sqlite-vec
-3. Rank by semantic similarity score only (no decay, no boosting)
-4. Filter out superseded/deleted memories
-5. For any superseded memory that would have matched, substitute the head of its chain
-6. Return top-k results
-
-Future enhancements (post-MVP):
-- Time decay weighting
-- Metadata filtering (e.g., "only memories from project X")
-- Recency boosting
-
-## Supersession Chain Logic
-
-When updating a memory:
-```
-Original Memory A (content: "foo")
-    ↓ update
-Memory A.superseded_by = B.id
-Memory B (content: "bar") ← new memory created
-    ↓ update  
-Memory B.superseded_by = C.id
-Memory C (content: "baz") ← head of chain
-```
-
-**Traversal**: Always follow `superseded_by` pointers until you reach a memory where `superseded_by` is null. That's the head.
-
-**Why this matters**: The embedding for "foo" still exists and is searchable. If someone searches for something similar to "foo", they'll find it—but get back "baz" (the current truth).
 
 ## Project Structure
 ```
-mcp-memory/
-├── pyproject.toml          # Package config, dependencies, uvx entry point
+vector-memory-mcp/
+├── package.json            # Package config, dependencies
 ├── README.md               # User-facing documentation
 ├── src/
-│   └── mcp_memory/
-│       ├── __init__.py
-│       ├── server.py       # MCP server setup and tool definitions
-│       ├── memory.py       # Memory dataclass and business logic
-│       ├── store.py        # SQLite/sqlite-vec storage layer
-│       └── embeddings.py   # MiniLM-v6 embedding wrapper
+│   ├── index.ts            # Entry point
+│   ├── config/             # Configuration management
+│   ├── db/                 # LanceDB storage layer
+│   ├── services/
+│   │   ├── embeddings.service.ts  # Embeddings via @xenova/transformers
+│   │   └── memory.service.ts      # Core memory operations
+│   └── mcp/
+│       ├── server.ts       # MCP server setup
+│       ├── tools.ts        # MCP tool definitions
+│       └── handlers.ts     # Tool request handlers
 └── tests/
     └── ...
 ```
@@ -172,44 +118,25 @@ All configuration via environment variables, all optional:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_MEMORY_DB_PATH` | `~/.local/share/mcp-memory/memories.db` | Path to SQLite database file |
-| `MCP_MEMORY_MODEL` | `all-MiniLM-L6-v2` | Embedding model (future: allow swapping) |
+| `VECTOR_MEMORY_DB_PATH` | `~/.local/share/vector-memory-mcp/memories.db` | Path to LanceDB database |
+| `VECTOR_MEMORY_MODEL` | `Xenova/all-MiniLM-L6-v2` | Embedding model |
 
 ## Dependencies
-```toml
-[project]
-dependencies = [
-    "mcp",                    # MCP SDK
-    "sentence-transformers",  # For MiniLM-v6 embeddings
-    "sqlite-vec",             # Vector search in SQLite
-]
+```json
+{
+  "dependencies": {
+    "@lancedb/lancedb": "^0.4.0",
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "@xenova/transformers": "^2.14.0",
+    "apache-arrow": "^14.0.0"
+  }
+}
 ```
-
-## Stretch Goals (Cut First If Needed)
-
-1. **CLI for debugging**: `mcp-memory list`, `mcp-memory search "query"`, `mcp-memory get <id>`
-2. **Web UI**: Simple browser interface for browsing and searching memories
-
-## Out of Scope for MVP
-
-- Working memory / session state (belongs in client)
-- Memory consolidation / clustering
-- Multiple embedding model support
-- Non-SQLite backends
-- Authentication / multi-user
 
 ## Success Criteria
 
 MVP is complete when:
 
-1. `uvx mcp-memory` starts the server with zero configuration
+1. `bunx vector-memory-mcp` starts the server with zero configuration
 2. All four MCP tools work correctly
 3. Semantic search returns relevant results
-4. Supersession chains work (update a memory, search for old content, get new content)
-5. Soft deletes work (deleted memories don't appear in search)
-
-## Open Questions (Decide During Implementation)
-
-1. **get_memory on superseded memory**: Return as-is with a flag, or auto-follow to head?
-2. **Tombstone value**: Use `"DELETED"` string, or a special UUID, or a boolean `is_deleted` field?
-3. **Default DB location**: `~/.local/share/mcp-memory/` or somewhere else?

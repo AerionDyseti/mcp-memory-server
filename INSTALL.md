@@ -6,7 +6,7 @@ To test the MCP memory server in Claude Code:
 
 ### 1. Install dependencies
 ```bash
-cd /home/aerion/dev/mcp-memory-server
+cd /home/aerion/dev/vector-memory-mcp
 bun install
 ```
 
@@ -19,7 +19,7 @@ Edit `~/.claude/config.json` and add:
   "mcpServers": {
     "memory": {
       "command": "bun",
-      "args": ["run", "/home/aerion/dev/mcp-memory-server/src/index.ts"]
+      "args": ["run", "/home/aerion/dev/vector-memory-mcp/src/index.ts"]
     }
   }
 }
@@ -56,7 +56,7 @@ Once installed, Claude Code will have access to these tools:
 
 Memories are stored in:
 ```
-~/.local/share/mcp-memory/memories.db
+~/.local/share/vector-memory-mcp/memories.db
 ```
 
 You can inspect the database with any SQLite browser if needed.
@@ -65,7 +65,7 @@ You can inspect the database with any SQLite browser if needed.
 
 ### Test the server manually
 ```bash
-cd /home/aerion/dev/mcp-memory-server
+cd /home/aerion/dev/vector-memory-mcp
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}' | bun run src/index.ts
 ```
 
