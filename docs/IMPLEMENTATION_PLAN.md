@@ -15,7 +15,7 @@ Two-tier semantic memory storage system with project-level (`.memory/db`) and gl
 ### Embedding Strategy
 
 - **Model**: Open-source local embeddings (no cloud APIs)
-- **Recommended**: @xenova/transformers with `Xenova/all-MiniLM-L6-v2`
+- **Recommended**: @huggingface/transformers with `Xenova/all-MiniLM-L6-v2`
 - **Rationale**: 384d provides good balance of performance, storage, and quality
 
 ### Storage Architecture
@@ -50,7 +50,7 @@ Two-tier semantic memory storage system with project-level (`.memory/db`) and gl
 
 ### 2. Embedding System
 
-- [ ] Use open-source local embedding model (@xenova/transformers)
+- [ ] Use open-source local embedding model (@huggingface/transformers)
 - [ ] Use 384 dimensions (good balance of performance/storage)
 - [ ] Support model versioning in metadata (track which model generated each embedding)
 - [ ] Implement lazy migration: re-embed memories when retrieved if model version differs
@@ -451,7 +451,7 @@ Config file: `~/.local/share/vector-memory-mcp/config.json`
 
 ### Embeddings
 
-**Primary**: **@xenova/transformers**
+**Primary**: **@huggingface/transformers**
 
 - Lightweight, no Python dependency
 - Good quality for 384d embeddings
@@ -590,7 +590,7 @@ Config file: `~/.local/share/vector-memory-mcp/config.json`
 
 ### Q1: Embedding Model Choice
 
-**Decision**: Start with @xenova/transformers (Xenova/all-MiniLM-L6-v2, 384d)
+**Decision**: Start with @huggingface/transformers (Xenova/all-MiniLM-L6-v2, 384d)
 **Rationale**: Lightweight, no heavy dependencies, good quality, easy to swap later
 
 ### Q2: Resources vs Tools

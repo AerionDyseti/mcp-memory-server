@@ -21,7 +21,7 @@ This document outlines the comprehensive testing strategy and development workfl
 ```
 - MCP Framework: @modelcontextprotocol/sdk
 - Database: LanceDB
-- Embeddings: @xenova/transformers (Xenova/all-MiniLM-L6-v2, 384d)
+- Embeddings: @huggingface/transformers (Xenova/all-MiniLM-L6-v2, 384d)
 - Testing: bun test
 - Transport: stdio (Claude Code requirement)
 ```

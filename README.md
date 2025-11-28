@@ -179,7 +179,7 @@ vector-memory-mcp/
 
 - **MCP Framework**: @modelcontextprotocol/sdk (official SDK)
 - **Vector Database**: LanceDB (fast, local, vector search)
-- **Embeddings**: @xenova/transformers (Xenova/all-MiniLM-L6-v2, 384 dimensions)
+- **Embeddings**: [@huggingface/transformers](https://huggingface.co/docs/transformers.js) (Xenova/all-MiniLM-L6-v2, 384 dimensions)
 - **Language**: TypeScript 5.0+
 - **Runtime**: Bun 1.0+
 - **Testing**: Bun test
@@ -193,7 +193,7 @@ vector-memory-mcp/
 ```
 Claude Code calls store_memory tool
          ↓
-Content → @xenova/transformers → 384d vector
+Content → @huggingface/transformers → 384d vector
          ↓
 Store in LanceDB with metadata
          ↓
@@ -205,7 +205,7 @@ Store in LanceDB with metadata
 ```
 Claude Code calls search_memories
          ↓
-Query → @xenova/transformers → 384d vector
+Query → @huggingface/transformers → 384d vector
          ↓
 Vector search in LanceDB
          ↓
@@ -346,7 +346,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - Built with [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/typescript-sdk) - Official MCP TypeScript SDK
 - Uses [LanceDB](https://lancedb.com/) for fast, local vector search
-- Powered by [@xenova/transformers](https://github.com/xenova/transformers.js) for local embeddings
+- Powered by [@huggingface/transformers](https://huggingface.co/docs/transformers.js) for local embeddings
 - Database layer via [Drizzle ORM](https://orm.drizzle.team/)
 - Inspired by [doobidoo's mcp-memory-service](https://github.com/doobidoo/mcp-memory-service)
 
