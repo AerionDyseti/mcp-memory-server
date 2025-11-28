@@ -1,5 +1,7 @@
 import { Database } from "bun:sqlite";
 import * as lancedb from "@lancedb/lancedb";
+import { existsSync, statSync } from "fs";
+// import * as sqliteVec from "sqlite-vec"; // Uncomment if running migration and install sqlite-vec
 import { config } from "../src/config/index.js";
 import { TABLE_NAME, memorySchema } from "../src/db/schema.js";
 
@@ -12,13 +14,23 @@ async function migrate() {
   const oldDbPath = config.dbPath; // e.g. ~/.local/share/mcp-memory/memories.db
   const newDbPath = oldDbPath + ".lancedb";
 
-  console.log(`Migrating from ${oldDbPath} to ${newDbPath}...`);
+  console.log(`Migrating from: ${oldDbPath}`);
+  console.log(`Target: ${newDbPath}`);
+
+  if (!existsSync(oldDbPath)) {
+    console.error(`Error: Source database file does not exist at ${oldDbPath}`);
+    return;
+  }
+
+  const stats = statSync(oldDbPath);
+  console.log(`Source file size: ${stats.size} bytes`);
 
   let sqlite;
   try {
-    sqlite = new Database(oldDbPath, { create: false });
+    sqlite = new Database(oldDbPath); 
+    // sqliteVec.load(sqlite); // Uncomment if running migration
   } catch (e) {
-    console.log("No existing SQLite database found. Skipping migration.");
+    console.error("Failed to open SQLite database:", e);
     return;
   }
 
@@ -26,7 +38,7 @@ async function migrate() {
   try {
     sqlite.query("SELECT count(*) FROM memories").get();
   } catch (e) {
-    console.log("Memories table not found in SQLite DB. Skipping migration.");
+    console.error("Memories table not found in SQLite DB. Is this a valid mcp-memory database?", e);
     return;
   }
 
