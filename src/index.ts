@@ -8,6 +8,14 @@ import { MemoryService } from "./services/memory.service.js";
 import { startServer } from "./mcp/server.js";
 
 async function main(): Promise<void> {
+  // Check for warmup command
+  const args = process.argv.slice(2);
+  if (args[0] === "warmup") {
+    const { warmup } = await import("../scripts/warmup.js");
+    await warmup();
+    return;
+  }
+
   // Initialize database
   const db = await connectToDatabase(config.dbPath);
 

@@ -57,21 +57,38 @@ A production-ready MCP (Model Context Protocol) server that provides semantic me
 
 > **Note:** This server requires Bun to run.
 
-### Installation
+### Installation & Configuration
 
+#### Option 1: Global Install (Recommended)
+
+**Install:**
 ```bash
-# Clone the repository
+bun install -g @aeriondyseti/vector-memory-mcp
+```
+
+> **Note:** The installation automatically downloads ML models (~90MB) and verifies native dependencies. This may take a minute on first install.
+
+**Configure Claude Code** - Add to `~/.claude/config.json`:
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "vector-memory-mcp"
+    }
+  }
+}
+```
+
+#### Option 2: Local Development
+
+**Install:**
+```bash
 git clone https://github.com/AerionDyseti/vector-memory-mcp.git
 cd vector-memory-mcp
-
-# Install dependencies
 bun install
 ```
 
-### Configure Claude Code
-
-Add to your `~/.claude/config.json`:
-
+**Configure Claude Code** - Add to `~/.claude/config.json`:
 ```json
 {
   "mcpServers": {
@@ -82,8 +99,17 @@ Add to your `~/.claude/config.json`:
   }
 }
 ```
+*Replace `/absolute/path/to/` with your actual installation path.*
 
-Replace `/absolute/path/to/` with your actual installation path.
+---
+
+**What gets installed:**
+- The vector-memory-mcp package and all dependencies
+- Native binaries for ONNX Runtime (~32MB) and image processing (~10MB)
+- ML model files automatically downloaded during installation (~90MB, cached in `~/.cache/huggingface/`)
+- **Total first-time setup:** ~130MB of downloads
+
+> 💡 **Tip:** If you need to re-download models or verify dependencies, run: `vector-memory-mcp warmup`
 
 ### Start Using It
 
